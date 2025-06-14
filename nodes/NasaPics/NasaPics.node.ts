@@ -1,41 +1,44 @@
 import type {
-	IExecuteFunctions,
-	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 } from 'n8n-workflow';
-import { NodeConnectionType, NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionType } from 'n8n-workflow';
 
+/**
+ * 宣言型ノードの場合、通常はINodeTypeとINodeTypeDescriptionがインポートされます。
+ * ノードの主要なロジックを定義するクラスを作成し、INodeTypeインターフェースを実装します。
+ */
 export class NasaPics implements INodeType {
+  // ノードのメタデータを定義します。INodeTypeDescription型を持つ
 	description: INodeTypeDescription = {
 		displayName: 'NASA Pics',
 		name: 'nasaPics',
     icon: 'file:nasapics.svg',
-		group: ['transform'],
+		group: ['transform'],     //  ワークフローの実行時にノードがどのように振る舞うか trigger, schedule, input, output
 		version: 1,
     subtitle: '={{$parameter["operation"] + ": " + $parameter["resource"]}}',
 		description: 'Get data from NASAs API',
 		defaults: {
 			name: 'Example Node',
 		},
-		inputs: [NodeConnectionType.Main],
-		outputs: [NodeConnectionType.Main],
-    credentials: [
+		inputs: [NodeConnectionType.Main],  // 入力コネクタの名前を定義します。単一のコネクタの場合は['main']と指定します
+		outputs: [NodeConnectionType.Main],  // 出力コネクタの名前を定義します。単一のコネクタの場合は['main']と指定します
+    credentials: [  // ノードが使用する認証情報を定義します。
       {
         name: 'nasaPicsApi',
         required: true,
       },
     ],
-    requestDefaults: {
+    requestDefaults: {  // ノードが行うAPI呼び出しの基本的な情報を設定します。baseURLは必須で、共通のheadersやurlなどを指定できます
       baseURL: 'https://api.nasa.gov',
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
     },
-		properties: [
+		properties: [ // ノードの動作を定義する重要な部分
 			{
-				displayName: 'Resource',
+				displayName: 'Resource',  // リソースオブジェクト: APIで操作する「リソース」（例: "Card"）を定義します。displayNameは常に'Resource'、nameは常に'resource'とするのが標準です
 				name: 'resource',
 				type: 'options',
         default: 'astronomyPictureOfTheDay',
@@ -52,7 +55,7 @@ export class NasaPics implements INodeType {
         ]
 			},
       {
-        displayName: 'Operation',
+        displayName: 'Operation', // 操作オブジェクト: 特定のリソースに対して実行できる「操作」（例: "Get all"）を定義します。options配列内に各操作の動作（ルーティング、REST動詞など）を記述します。
         name: 'operation',
         type: 'options',
         default: 'get',
@@ -107,7 +110,7 @@ export class NasaPics implements INodeType {
         default: 'get',
       },
       {
-        displayName: 'Rover Name',
+        displayName: 'Rover Name', // 追加フィールドオブジェクト: GUIの「Additional Fields」セクションに表示されるオプションのパラメータを定義します
         description: 'Choose which Mars Rover to get a photo from',
         required: true,
         name: 'roverName',
@@ -190,47 +193,5 @@ export class NasaPics implements INodeType {
       }
 		],
     usableAsTool: true,
-	};
-
-	// The function below is responsible for actually doing whatever this node
-	// is supposed to do. In this case, we're just appending the `myString` property
-	// with whatever the user has entered.
-	// You can make async calls and use `await`.
-	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
-		const items = this.getInputData();
-
-		let item: INodeExecutionData;
-		let myString: string;
-
-		// Iterates over all input items and add the key "myString" with the
-		// value the parameter "myString" resolves to.
-		// (This could be a different value for each item in case it contains an expression)
-		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-			try {
-				myString = this.getNodeParameter('myString', itemIndex, '') as string;
-				item = items[itemIndex];
-
-				item.json.myString = myString;
-			} catch (error) {
-				// This node should never fail but we want to showcase how
-				// to handle errors.
-				if (this.continueOnFail()) {
-					items.push({ json: this.getInputData(itemIndex)[0].json, error, pairedItem: itemIndex });
-				} else {
-					// Adding `itemIndex` allows other workflows to handle this error
-					if (error.context) {
-						// If the error thrown already contains the context property,
-						// only append the itemIndex
-						error.context.itemIndex = itemIndex;
-						throw error;
-					}
-					throw new NodeOperationError(this.getNode(), error, {
-						itemIndex,
-					});
-				}
-			}
-		}
-
-		return [items];
 	}
 }
